@@ -15,7 +15,7 @@ def select_file():
 
 def extract_url(url, keys):
     res = urllib.parse.parse_qs(url)
-    return {key: value[0] for (key, value) in res.items() if key in keys}
+    return pd.DataFrame.from_dict({key: value for (key, value) in res.items() if key in keys}, orient='columns')
 
 
 class App(tk.Tk):
@@ -88,7 +88,7 @@ class App(tk.Tk):
         ttk.Label(self, text="Excluded columns").grid(column=0, row=5, sticky=tk.W, padx=5, pady=6)
         self.target_excluded_columns = Text(self, height=2, width=20)
         self.target_excluded_columns.grid(row=5, column=1, sticky=tk.EW, padx=5, columnspan=2)
-        self.target_excluded_columns.insert(END, 'Device,Browser,IP,Start,End,Duration,Current Link,Route Part')
+        self.target_excluded_columns.insert(END, 'Start,End,Duration,Current Link,Route Part')
 
         # row 6
         tk.Label(self, text="Base column: ").grid(row=6, column=0, sticky=tk.W, padx=5, pady=5)
@@ -170,12 +170,12 @@ class App(tk.Tk):
             if self.source_filename:
                 d = self.source_dataframe.loc[self.source_dataframe[source_base_column].isin([row[target_base_column]])]
                 d = d.loc[:, ~d.columns.isin([source_base_column])]
-                to_be_appended = to_be_appended.append(d, ignore_index=True)
+                to_be_appended = pd.concat([to_be_appended, d], ignore_index=True)
 
             # Extract URL
             if url_columns_tolist:
                 extracted_url = extract_url(row[url_base_column], url_columns_tolist)
-                to_be_appended_url = to_be_appended_url.append(extracted_url, ignore_index=True)
+                to_be_appended_url = pd.concat([to_be_appended_url, extracted_url], ignore_index=True)
 
         position = len(self.target_dataframe.columns)
         to_be_appended_columns = []
@@ -196,8 +196,8 @@ class App(tk.Tk):
                 self.target_dataframe.insert(position, rw, to_be_appended_url[rw])
 
         # Get the destination file name and save dataframe to a file with CSV format
-        filename = asksaveasfilename(filetypes=(("CSV", '*.csv'), ("All files", '*.*')), defaultextension=".csv")
-        self.target_dataframe.to_csv(filename, index=False, encoding='utf_8_sig')
+        filename = asksaveasfilename(filetypes=(("Excel", ('*.xls', '*.xlsx')), ("All files", '*.*')), defaultextension=".xlsx")
+        self.target_dataframe.to_excel(filename, index=False, encoding='utf_8_sig')
         lbl.config(text="Data successfully appended!")
 
 
