@@ -162,7 +162,7 @@ class App(tk.Tk):
         # get URL extraction settings
         tmp = self.url_keys.get().split(":")
         url_base_column = tmp[0]
-        url_columns_tolist = tmp[1].split(",")
+        url_columns_tolist = None
 
         for index, row in self.target_dataframe.iterrows():
 
