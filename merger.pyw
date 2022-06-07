@@ -6,6 +6,7 @@ from tkinter.filedialog import asksaveasfilename
 import pandas as pd
 import os
 import urllib.parse
+import numpy as np
 
 
 def select_file():
@@ -70,7 +71,7 @@ class App(tk.Tk):
         ttk.Label(self, text="Base column: ").grid(column=0, row=2, sticky=tk.W, padx=5, pady=5)
         self.source_base_column = ttk.Entry(self)
         self.source_base_column.grid(row=2, column=1, sticky=tk.EW, padx=5, pady=5, columnspan=2)
-        self.source_base_column.insert(END, "Respondent ID")
+        self.source_base_column.insert(END, "School Name")
 
         # row 3
         ttk.Separator(self, orient="horizontal").grid(row=3, column=1, columnspan=2, sticky=tk.EW)
@@ -94,7 +95,7 @@ class App(tk.Tk):
         tk.Label(self, text="Base column: ").grid(row=6, column=0, sticky=tk.W, padx=5, pady=5)
         self.target_base_column = ttk.Entry(self)
         self.target_base_column.grid(row=6, column=1, sticky=tk.EW, pady=5, padx=6, columnspan=2)
-        self.target_base_column.insert(END, "SAMPLE ID")
+        self.target_base_column.insert(END, "Institution_Name_Proper")
 
         # row 7
         tk.Label(self, text="Insert to index: ").grid(row=7, column=0, sticky=tk.W, padx=5, pady=5)
@@ -163,13 +164,24 @@ class App(tk.Tk):
         tmp = self.url_keys.get().split(":")
         url_base_column = tmp[0]
         url_columns_tolist = None
+        new_target = self.target_dataframe.copy()
+        new_target = new_target[0:0]
 
         for index, row in self.target_dataframe.iterrows():
-
+            new_target = pd.concat([new_target, pd.DataFrame([row.values], columns=row.keys())], ignore_index=True)
             # Extract data from source dataframe if there were any
             if self.source_filename:
                 d = self.source_dataframe.loc[self.source_dataframe[source_base_column].isin([row[target_base_column]])]
-                d = d.loc[:, ~d.columns.isin([source_base_column])]
+                # d = d.loc[:, ~d.columns.isin([source_base_column])]
+                if d.empty:
+                    empty_array = np.full(len(self.source_dataframe.columns), None)
+                    d = pd.DataFrame([empty_array], columns=self.source_dataframe.columns.values.tolist())
+                if len(d.index) > 1:
+                    count = len(d.index) - 1
+                    while count > 0:
+                        new_target = pd.concat([new_target, pd.DataFrame([row.values], columns=row.keys())],
+                                               ignore_index=True)
+                        count = count - 1
                 to_be_appended = pd.concat([to_be_appended, d], ignore_index=True)
 
             # Extract URL
@@ -186,18 +198,18 @@ class App(tk.Tk):
                     position = int(self.target_position.get())
 
                 position += index
-                self.target_dataframe.insert(position, row, to_be_appended[row])
+                new_target.insert(position, row, to_be_appended[row])
 
         if url_columns_tolist:
             position = int(self.target_position.get()) + len(to_be_appended_columns) - 1
             to_be_appended_url_columns = to_be_appended_url.columns.values.tolist()
             for idx, rw in enumerate(to_be_appended_url_columns):
                 position += 1
-                self.target_dataframe.insert(position, rw, to_be_appended_url[rw])
+                new_target.insert(position, rw, to_be_appended_url[rw])
 
         # Get the destination file name and save dataframe to a file with CSV format
         filename = asksaveasfilename(filetypes=(("Excel", ('*.xls', '*.xlsx')), ("All files", '*.*')), defaultextension=".xlsx")
-        self.target_dataframe.to_excel(filename, index=False, encoding='utf_8_sig')
+        new_target.to_excel(filename, index=False, encoding='utf_8_sig')
         lbl.config(text="Data successfully appended!")
 
 
