@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import *
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilenames
 from tkinter.filedialog import asksaveasfilename
 import pandas as pd
 import os
@@ -10,7 +10,7 @@ import numpy as np
 
 
 def select_file():
-    filename = askopenfilename(filetypes=[('Excel', ('*.xls', '*.xslm', '*.xlsx')), ('CSV', '*.csv',)])
+    filename = askopenfilenames(filetypes=[('Excel', ('*.xls', '*.xslm', '*.xlsx')), ('CSV', '*.csv',)])
     return filename
 
 
