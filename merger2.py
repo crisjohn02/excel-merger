@@ -3,6 +3,8 @@ from tkinter import ttk
 from tkinter import *
 from tkinter.filedialog import askopenfilenames, askopenfilename
 from tkinter.filedialog import asksaveasfilename
+from pathlib import Path
+from threading import Thread
 
 import pandas as pd
 import os
@@ -148,15 +150,16 @@ class App(tk.Tk):
 
     def select_source(self):
         this = self
-        self.source_filename = select_file()
+        file = select_file()
         self.source_entry.delete(0, END)
-        self.source_entry.insert(0, os.path.basename(self.source_filename))
-        if this.source_filename:
-            if this.source_filename.endswith('.csv'):
-                this.source_dataframe = pd.read_csv(this.source_filename, encoding="ISO-8859-1")
+        self.source_entry.insert(0, os.path.basename(file))
+        if file:
+            if file.endswith('.csv'):
+                this.source_dataframe = pd.read_csv(file, encoding="ISO-8859-1")
             else:
-                this.source_dataframe = pd.read_excel(this.source_filename)
+                this.source_dataframe = pd.read_excel(file)
 
+        this.source_filename = Path(file).stem
         columns = this.source_dataframe.columns.values
         this.source_base_column = tk.StringVar(this)
         dd = ttk.OptionMenu(this, this.source_base_column, columns[0], *columns)
@@ -182,12 +185,15 @@ class App(tk.Tk):
         dd = ttk.OptionMenu(this, this.target_base_column, columns[0], *columns)
         dd.grid(row=6, column=1, sticky=tk.EW, pady=5, padx=6, columnspan=2)
 
-        this.target_position.delete(0, END)
-        this.target_position.insert(0, len(columns))
+        # this.target_position.delete(0, END)
+        # this.target_position.insert(0, len(columns))
 
     def run_append2(self):
+        lbl = tk.Label(self, text="Processing")
+        lbl.grid(row=9, column=2, columnspan=2, padx=5, pady=5)
         this = self
         header_collection = []
+        filename_collection = []
         source_excluded = self.source_excluded_columns.get("1.0", "end-1c").split(",")
         source_df = this.source_dataframe.loc[:, ~this.source_dataframe.columns.isin(source_excluded)]
 
@@ -197,6 +203,9 @@ class App(tk.Tk):
 
         source_columns = source_df.columns
         header_collection.append(source_columns)
+        s_filename = np.array([self.source_filename])
+        null_values = np.full(shape=len(source_columns) - 1, fill_value=None)
+        filename_collection.append(np.concatenate((s_filename, null_values), axis=0))
         t = {v: k for k, v in enumerate(source_columns) if v == source_base_column}
         source_base = t.get(source_base_column)
         source_df.columns = np.arange(0, len(source_columns))
@@ -213,6 +222,9 @@ class App(tk.Tk):
             target_columns = target_df.columns
 
             header_collection.append(target_columns)
+            filename = np.array([Path(file).stem])
+            null_values = np.full(shape=len(target_columns) + -1, fill_value=None)
+            filename_collection.append(np.concatenate((filename, null_values), axis=0))
             t = {v: k for k, v in enumerate(target_columns) if v == target_base_column}
             target_base = t.get(target_base_column) + count
             target_df.columns = np.arange(count, len(target_columns) + count)
@@ -223,11 +235,18 @@ class App(tk.Tk):
         headers = []
         headers.insert(0, list(flatten(header_collection)))
 
-        result = pd.concat([pd.DataFrame(headers), result], ignore_index=True)
-        # print(header_collection)
-        filename = asksaveasfilename(filetypes=(("Excel", ('*.xls', '*.xlsx')), ("All files", '*.*')),
-                                     defaultextension=".xlsx")
-        result.to_excel(filename, index=False, header=False)
+        parts = []
+        parts.insert(0, list(flatten(filename_collection)))
+
+        result = pd.concat([pd.DataFrame(parts), pd.DataFrame(headers), result], ignore_index=True)
+
+        filename = asksaveasfilename(filetypes=(("CSV (Faster)", '*.csv'), ("Excel", '*.xlsx')),
+                                     defaultextension=".csv")
+        if filename.endswith('csv'):
+            result.to_csv(filename, index=False, header=False, encoding='utf_8_sig')
+        else:
+            result.to_excel(filename, index=False, header=False)
+        lbl.config(text="Data successfully merged!")
 
 
 if __name__ == "__main__":
