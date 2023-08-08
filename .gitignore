@@ -3,5 +3,6 @@
 /venv
 /.idea
 /__pycache__
+/databases/__pycache__
 merger.spec
 merger2.spec

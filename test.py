@@ -28,12 +28,15 @@ import pandas as pd
 import os
 import urllib.parse
 import glob
+from pathlib import Path
+import numpy as np
 
+from natsort import natsorted
 
 def select_file():
-    filename = askopenfilename(filetypes=[('CSV', '*.csv',)])
-    return filename
-    # return askdirectory()
+    # filename = askopenfilename(filetypes=[('CSV', '*.csv',)])
+    # return filename
+    return askdirectory()
 
 
 def extract_url(url, keys):
@@ -48,7 +51,7 @@ def run_merge():
     base_df3 = pd.read_excel(base_file, sheet_name="Counts")
 
     source_path = askdirectory()
-    files = glob.glob(source_path + "/*.xlsx")
+    files = natsorted(glob.glob(source_path + "/*.xlsx"))
     for file in files:
         base1 = base_df1.copy()
         base2 = base_df2.copy()
@@ -104,11 +107,13 @@ class App(tk.Tk):
         self.counter = 1
 
     def create_widgets(self):
-        login_button = ttk.Button(self, text="Go", command=self.getvalues)
+        login_button = ttk.Button(self, text="Go", command=self.getvalues2)
         login_button.grid(column=0, row=3, sticky=tk.NW, padx=5, pady=5)
 
         save_button = ttk.Button(self, text="save", command=self.save)
         save_button.grid(column=0, row=4, sticky=tk.NW, padx=5, pady=5)
+        self.source_entry = ttk.Label(self, text='')
+        self.source_entry.grid(column=0, row=8, sticky=tk.NW, padx=5, pady=5)
 
     def getvalues(self):
         file = None
@@ -116,12 +121,29 @@ class App(tk.Tk):
         _tmp = None
         _row = None
         _tmp = pd.read_csv(file, encoding="ISO-8859-1")
+        self.source_entry.config(text=file)
         _row = _tmp.iloc[9].values
         self.df[self.counter] = _row
         self.counter += 1
 
+    def getvalues2(self):
+        # file = None
+        source_path = askdirectory()
+
+        files = natsorted(glob.glob(source_path + "/*.csv"))
+        #print(files)
+        for file in files:
+            _tmp = None
+            _row = None
+            _tmp = pd.read_csv(file, encoding="ISO-8859-1")
+            self.source_entry.config(text=file)
+            _row = np.insert(_tmp.iloc[9].values, 0, Path(file).stem)
+            self.df[self.counter] = _row
+            self.counter += 1
+
     def save(self):
         self.df.to_csv('merged.csv', index=False, header=False)
+        print("Saved merged.csv")
 
     def select_source(self):
         self.source_filename = select_file()
